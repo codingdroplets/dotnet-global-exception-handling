@@ -1,14 +1,15 @@
 # Global Exception Handling in ASP.NET Core (.NET 10)
 
-[![Visit CodingDroplets](https://img.shields.io/badge/Website-codingdroplets.com-blue?style=for-the-badge&logo=google-chrome&logoColor=white)](https://codingdroplets.com/)
-[![YouTube](https://img.shields.io/badge/YouTube-CodingDroplets-red?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/@CodingDroplets)
-[![Patreon](https://img.shields.io/badge/Patreon-Support%20Us-orange?style=for-the-badge&logo=patreon&logoColor=white)](https://www.patreon.com/CodingDroplets)
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support%20Us-yellow?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/codingdroplets)
-[![GitHub](https://img.shields.io/badge/GitHub-codingdroplets-black?style=for-the-badge&logo=github&logoColor=white)](http://github.com/codingdroplets/)
+> **Centralized error handling done right** — One `IExceptionHandler` to replace all your scattered try/catch blocks, returning clean **RFC 7807 Problem Details** responses with zero internals leaked.
 
-A production-ready code sample demonstrating **centralized global exception handling** in ASP.NET Core using the built-in `IExceptionHandler` interface and **RFC 7807 Problem Details** responses.
-
-No more scattered try/catch blocks spread across every controller. One handler to rule them all.
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
+[![ASP.NET Core](https://img.shields.io/badge/ASP.NET%20Core-10.0-512BD4)](https://docs.microsoft.com/aspnet/core)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Visit CodingDroplets](https://img.shields.io/badge/Website-codingdroplets.com-blue?style=flat&logo=google-chrome&logoColor=white)](https://codingdroplets.com/)
+[![YouTube](https://img.shields.io/badge/YouTube-CodingDroplets-red?style=flat&logo=youtube&logoColor=white)](https://www.youtube.com/@CodingDroplets)
+[![Patreon](https://img.shields.io/badge/Patreon-Support%20Us-orange?style=flat&logo=patreon&logoColor=white)](https://www.patreon.com/CodingDroplets)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support%20Us-yellow?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/codingdroplets)
+[![GitHub](https://img.shields.io/badge/GitHub-codingdroplets-black?style=flat&logo=github&logoColor=white)](http://github.com/codingdroplets/)
 
 ---
 
@@ -23,75 +24,143 @@ Prefer a one-time tip? [Buy us a coffee ☕](https://buymeacoffee.com/codingdrop
 
 ---
 
-## What You'll Learn
+## 🎯 What You'll Learn
 
-- How to implement `IExceptionHandler` for centralized error handling
-- How to return structured **Problem Details** (RFC 7807) responses
-- How to map custom exception types to specific HTTP status codes
-- How to keep internal error details out of API responses (security best practice)
-- How to write integration tests that verify exception handling behavior
+- How to implement **`IExceptionHandler`** — the official Microsoft-recommended pattern since .NET 8
+- How to return structured **Problem Details (RFC 7807)** responses for every error type
+- How to map custom exception types to specific HTTP status codes (`404`, `400`, `403`, `500`)
+- How to **never leak** internal stack traces or exception details to API consumers
+- How to write **integration tests** that verify exception handling end-to-end
 
 ---
 
-## Project Structure
+## 🗺️ Architecture Overview
+
+```
+Incoming HTTP Request
+        │
+        ▼
+┌───────────────────────────────────────────────────┐
+│           ASP.NET Core Middleware Pipeline         │
+│  ┌─────────────────────────────────────────────┐  │
+│  │      app.UseExceptionHandler()  ← FIRST     │  │
+│  │  Catches any unhandled exception downstream │  │
+│  └──────────────────┬──────────────────────────┘  │
+│                     │                             │
+│  ┌──────────────────▼──────────────────────────┐  │
+│  │         Controller / Endpoint               │  │
+│  │   throws NotFoundException / Validation...  │  │
+│  └──────────────────┬──────────────────────────┘  │
+└─────────────────────┼─────────────────────────────┘
+                      │ exception bubbles up
+                      ▼
+┌───────────────────────────────────────────────────┐
+│          GlobalExceptionHandler                   │
+│                                                   │
+│  exception switch:                                │
+│  ├─ NotFoundException      → 404 Problem Details  │
+│  ├─ ValidationException    → 400 Problem Details  │
+│  ├─ ForbiddenException     → 403 Problem Details  │
+│  └─ anything else          → 500 (no internals)   │
+└───────────────────────────────────────────────────┘
+                      │
+                      ▼
+         RFC 7807 Problem Details JSON
+```
+
+---
+
+## 📋 Exception → HTTP Status Code Mapping
+
+| Exception Type | HTTP Status | Scenario |
+|---|---|---|
+| `NotFoundException` | `404 Not Found` | Resource not found by ID |
+| `ValidationException` | `400 Bad Request` | Invalid input, field-level errors |
+| `ForbiddenException` | `403 Forbidden` | Insufficient permissions |
+| Any other exception | `500 Internal Server Error` | Unexpected error (no details leaked) |
+
+---
+
+## 📁 Project Structure
 
 ```
 dotnet-global-exception-handling/
 ├── src/
 │   └── GlobalExceptionHandling.Api/
 │       ├── Controllers/
-│       │   └── ProductsController.cs      # Demo controller with intentional error triggers
+│       │   └── ProductsController.cs      # Demo controller — intentional error triggers
 │       ├── Exceptions/
 │       │   ├── NotFoundException.cs       # Maps to HTTP 404
 │       │   ├── ValidationException.cs     # Maps to HTTP 400 with field errors
 │       │   └── ForbiddenException.cs      # Maps to HTTP 403
 │       ├── Handlers/
-│       │   └── GlobalExceptionHandler.cs  # The single IExceptionHandler implementation
+│       │   └── GlobalExceptionHandler.cs  # Single IExceptionHandler implementation
 │       └── Program.cs                     # App setup and middleware registration
 └── tests/
     └── GlobalExceptionHandling.Tests/
-        ├── GlobalExceptionHandlerTests.cs # Integration tests for each HTTP status code
-        └── ExceptionTests.cs              # Unit tests for custom exception types
+        ├── GlobalExceptionHandlerTests.cs # Integration tests — all HTTP status codes
+        └── ExceptionTests.cs              # Unit tests — custom exception types
 ```
 
 ---
 
-## How It Works
+## 🛠️ Prerequisites
 
-### 1. Define Custom Exception Types
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- Any IDE: Visual Studio 2022+, VS Code, or JetBrains Rider
 
-Each exception type carries semantic meaning and maps to an HTTP status code:
+---
+
+## ⚡ Quick Start
+
+```bash
+# Clone the repo
+git clone https://github.com/codingdroplets/dotnet-global-exception-handling.git
+cd dotnet-global-exception-handling
+
+# Build
+dotnet build -c Release
+
+# Run the API
+dotnet run --project src/GlobalExceptionHandling.Api
+
+# Open Swagger UI → http://localhost:5289/swagger
+```
+
+---
+
+## 🔧 How It Works
+
+### Step 1 — Define Custom Exception Types
+
+Each exception type carries semantic meaning that maps directly to an HTTP status:
 
 ```csharp
-// Maps to 404 Not Found
+// Throws → 404 Not Found
 throw new NotFoundException("Product", id);
 
-// Maps to 400 Bad Request with field-level errors
+// Throws → 400 Bad Request with field-level errors
 throw new ValidationException(new Dictionary<string, string[]>
 {
     { "Name", ["Product name is required."] }
 });
 
-// Maps to 403 Forbidden
+// Throws → 403 Forbidden
 throw new ForbiddenException("Only administrators can delete products.");
 ```
 
-### 2. Register the Global Exception Handler
-
-In `Program.cs`, two lines are all it takes:
+### Step 2 — Register in Program.cs (Two Lines)
 
 ```csharp
-// Register the handler (must be before app.Build())
+// Register before app.Build()
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
-// Wire it into the middleware pipeline (must be first!)
+// Wire into middleware pipeline — must be FIRST
 app.UseExceptionHandler();
 ```
 
-### 3. Implement IExceptionHandler
-
-The `GlobalExceptionHandler` uses a pattern-matching switch to route each exception type to the correct HTTP response:
+### Step 3 — Implement IExceptionHandler
 
 ```csharp
 public sealed class GlobalExceptionHandler : IExceptionHandler
@@ -112,7 +181,7 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             ForbiddenException forbidden =>
                 (403, "Forbidden", forbidden.Message),
 
-            // Never leak internal exception details to the client
+            // Never leak internal details to consumers
             _ => (500, "Internal Server Error", "An unexpected error occurred.")
         };
 
@@ -125,9 +194,25 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
 }
 ```
 
-### 4. Structured Problem Details Response (RFC 7807)
+---
 
-Every error response follows the same predictable shape:
+## 📡 API Endpoints & Expected Responses
+
+| Method | Endpoint | Exception Thrown | HTTP Status |
+|--------|----------|------------------|-------------|
+| `GET` | `/api/products` | _(none)_ | `200 OK` |
+| `GET` | `/api/products/{id}` | `NotFoundException` | `404` |
+| `POST` | `/api/products` | `ValidationException` | `400` |
+| `DELETE` | `/api/products/{id}` | `ForbiddenException` | `403` |
+| `GET` | `/api/products/crash` | `InvalidOperationException` | `500` |
+
+Try `/api/products/9999` — you'll get a clean 404 with no stack trace in sight.
+
+---
+
+## 📦 Problem Details Response Shape (RFC 7807)
+
+Every error response follows the same predictable structure:
 
 ```json
 {
@@ -138,7 +223,7 @@ Every error response follows the same predictable shape:
 }
 ```
 
-For validation errors, field-level details are included:
+Validation errors include field-level detail:
 
 ```json
 {
@@ -154,88 +239,72 @@ For validation errors, field-level details are included:
 
 ---
 
-## Running the Sample
-
-### Prerequisites
-
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-
-### Clone & Run
-
-```bash
-git clone https://github.com/codingdroplets/dotnet-global-exception-handling.git
-cd dotnet-global-exception-handling
-
-dotnet run --project src/GlobalExceptionHandling.Api
-```
-
-Navigate to **http://localhost:5289/swagger** to open Swagger UI and test all endpoints interactively.
-
-### Run Tests
+## 🧪 Running Tests
 
 ```bash
 dotnet test -c Release
 ```
 
----
+**11 tests** across two test classes:
 
-## Endpoints & Expected Responses
-
-| Method   | Endpoint                  | Exception Thrown       | HTTP Status |
-|----------|---------------------------|------------------------|-------------|
-| `GET`    | `/api/products`           | _(none)_               | `200 OK`    |
-| `GET`    | `/api/products/{id}`      | `NotFoundException`    | `404`       |
-| `POST`   | `/api/products`           | `ValidationException`  | `400`       |
-| `DELETE` | `/api/products/{id}`      | `ForbiddenException`   | `403`       |
-| `GET`    | `/api/products/crash`     | `InvalidOperationException` | `500`  |
-
-Try hitting `/api/products/9999` — you'll get a clean 404 Problem Details response with no stack trace leaked.
+| Test Class | Tests | Coverage |
+|---|---|---|
+| `GlobalExceptionHandlerTests` | 7 integration tests | Each exception type → correct HTTP status + body |
+| `ExceptionTests` | 4 unit tests | Custom exception construction + message formatting |
 
 ---
 
-## Key Concepts
+## 🤔 Key Concepts
 
-### Why IExceptionHandler over Custom Middleware?
+### Why `IExceptionHandler` Over Custom Middleware?
 
 `IExceptionHandler` (introduced in .NET 8) is the **official Microsoft-recommended pattern**:
 
-- **Chainable:** You can register multiple handlers and chain them
-- **Integrated:** Works seamlessly with `AddProblemDetails()` and the existing exception handling pipeline
-- **Testable:** Easily unit-tested without mocking middleware directly
+| Feature | `IExceptionHandler` | Custom Middleware |
+|---------|--------------------|--------------------|
+| Chainable (multiple handlers) | ✅ | ❌ Manual wiring |
+| Integrates with `AddProblemDetails()` | ✅ | ❌ |
+| Registered via DI | ✅ | Partially |
+| Testable with `WebApplicationFactory` | ✅ | ✅ |
 
 ### Why Problem Details (RFC 7807)?
 
-Problem Details is the standard format for HTTP API errors:
-- **Consistent shape** across all error types
-- **Machine-readable** — clients can parse and act on it
-- **Human-readable** — developers can understand it at a glance
-- **Widely supported** by API clients, monitoring tools, and documentation generators
+- **Consistent shape** — every error looks the same, regardless of type
+- **Machine-readable** — clients can parse and act on `status` + `title`
+- **Human-readable** — developers understand it at a glance
+- **Industry standard** — supported by API gateways, monitoring tools, and documentation generators
 
 ### Security: Never Leak Internal Errors
 
-The catch-all branch intentionally returns a generic message:
+The catch-all branch returns only a generic message — the real exception with stack trace is **logged server-side** but **never returned to the client**:
 
 ```csharp
 _ => (500, "Internal Server Error", "An unexpected error occurred. Please try again later.")
 ```
 
-The actual exception (with stack trace) is **logged server-side** but **never returned to the client**.
-
 ---
 
-## Technologies Used
+## 🏷️ Technologies Used
 
 - **.NET 10** / **ASP.NET Core 10**
-- **IExceptionHandler** (built-in, no extra packages needed)
+- **`IExceptionHandler`** (built-in — no extra NuGet packages)
 - **Problem Details** (RFC 7807, `AddProblemDetails()`)
 - **Swashbuckle** (Swagger UI)
-- **xUnit** + **Microsoft.AspNetCore.Mvc.Testing** (integration tests)
+- **xUnit** + **`Microsoft.AspNetCore.Mvc.Testing`** (integration tests)
 
 ---
 
-## License
+## 📚 References
 
-MIT — free to use, modify, and share.
+- [Handle errors in ASP.NET Core — Microsoft Learn](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/error-handling)
+- [Problem Details for HTTP APIs (RFC 7807)](https://www.rfc-editor.org/rfc/rfc7807)
+- [IExceptionHandler Interface — .NET API](https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.diagnostics.iexceptionhandler)
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 

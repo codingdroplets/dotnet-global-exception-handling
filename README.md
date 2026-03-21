@@ -3,6 +3,7 @@
 [![Visit CodingDroplets](https://img.shields.io/badge/Website-codingdroplets.com-blue?style=for-the-badge&logo=google-chrome&logoColor=white)](https://codingdroplets.com/)
 [![YouTube](https://img.shields.io/badge/YouTube-CodingDroplets-red?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/@CodingDroplets)
 [![Patreon](https://img.shields.io/badge/Patreon-Support%20Us-orange?style=for-the-badge&logo=patreon&logoColor=white)](https://www.patreon.com/CodingDroplets)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support%20Us-yellow?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/codingdroplets)
 [![GitHub](https://img.shields.io/badge/GitHub-codingdroplets-black?style=for-the-badge&logo=github&logoColor=white)](http://github.com/codingdroplets/)
 
 A production-ready code sample demonstrating **centralized global exception handling** in ASP.NET Core using the built-in `IExceptionHandler` interface and **RFC 7807 Problem Details** responses.
@@ -17,6 +18,8 @@ If this sample saved you time, consider joining our Patreon community.
 You'll get **exclusive .NET tutorials, premium code samples, and early access** to new content — all for the price of a coffee.
 
 👉 **[Join CodingDroplets on Patreon](https://www.patreon.com/CodingDroplets)**
+
+Prefer a one-time tip? [Buy us a coffee ☕](https://buymeacoffee.com/codingdroplets)
 
 ---
 
@@ -243,6 +246,7 @@ MIT — free to use, modify, and share.
 | 🌐 Website | https://codingdroplets.com/ |
 | 📺 YouTube | https://www.youtube.com/@CodingDroplets |
 | 🎁 Patreon | https://www.patreon.com/CodingDroplets |
+| ☕ Buy Me a Coffee | https://buymeacoffee.com/codingdroplets |
 | 💻 GitHub | http://github.com/codingdroplets/ |
 
-> **Want more samples like this?** [Support us on Patreon](https://www.patreon.com/CodingDroplets) and get access to premium .NET content.
+> **Want more samples like this?** [Support us on Patreon](https://www.patreon.com/CodingDroplets) or [buy us a coffee ☕](https://buymeacoffee.com/codingdroplets) — every bit helps keep the content coming!
